@@ -3,5 +3,5 @@ pandas
 numpy
 folium
 streamlit-folium
-matplotlib
 graphviz
+xlsxwriter

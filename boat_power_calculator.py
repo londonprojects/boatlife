@@ -4,6 +4,7 @@ import numpy as np
 import folium
 from streamlit_folium import st_folium
 import graphviz as gv
+from io import BytesIO
 
 # Initialize session state for devices if not already done
 if 'devices' not in st.session_state:
@@ -229,13 +230,25 @@ with tab4:
     # Option to export results
     col1, col2 = st.columns(2)
     with col1:
-        if st.button('Export Results as CSV'):
-            df.to_csv('power_usage_results.csv')
-            st.success('Results exported to power_usage_results.csv')
+        csv = df.to_csv().encode('utf-8')
+        st.download_button(
+            label="Export Results as CSV",
+            data=csv,
+            file_name='power_usage_results.csv',
+            mime='text/csv',
+        )
     with col2:
-        if st.button('Export Results as Excel'):
-            df.to_excel('power_usage_results.xlsx')
-            st.success('Results exported to power_usage_results.xlsx')
+        output = BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+        writer.close()
+        excel_data = output.getvalue()
+        st.download_button(
+            label="Export Results as Excel",
+            data=excel_data,
+            file_name='power_usage_results.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
 
 with tab5:
     st.header('📁 Historical Data')
