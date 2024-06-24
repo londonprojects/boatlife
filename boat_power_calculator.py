@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import folium
 from streamlit_folium import st_folium
-import matplotlib.pyplot as plt
 import graphviz as gv
 
 # Initialize session state for devices if not already done
@@ -25,10 +24,28 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Results", "📁 Historical Data", "🔗 Connection Diagram"
 ])
 
+# Add a style tag for custom CSS to improve mobile responsiveness
+st.markdown("""
+    <style>
+    /* Custom CSS to improve mobile responsiveness */
+    .main .block-container {
+        max-width: 100% !important;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .stSlider, .stNumberInput, .stSelectbox {
+        width: 100% !important;
+    }
+    .stDataFrame, .stTable {
+        overflow-x: auto;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 with tab1:
     st.header('⚙️ Boat Parameters')
     with st.expander("Set Boat Parameters"):
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 1])
         with col1:
             speed = st.slider('Boat Speed (knots)', 0, 50, 10, help="Set the boat speed in knots")
             weight = st.slider('Boat Weight (tons)', 0, 100, 10, help="Set the boat weight in tons")
@@ -54,7 +71,7 @@ with tab1:
     # Weather conditions
     with st.expander("Weather Conditions"):
         st.subheader('Weather Conditions')
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 1])
         with col1:
             wind_speed = st.slider('Wind Speed (knots)', 0, 100, 10, help="Set the wind speed in knots")
         with col2:
@@ -107,6 +124,7 @@ with tab3:
         device_power = st.number_input('Device Power (W)', min_value=0, value=100, help="Enter the power consumption of the device in watts")
         if st.button('Add Device'):
             st.session_state.devices.append({'name': device_name, 'power': device_power})
+            st.experimental_rerun()
 
     # Display added devices
     if st.session_state.devices:
@@ -119,6 +137,7 @@ with tab3:
             device_to_remove = st.selectbox('Select Device to Remove', device_df['name'])
             if st.button('Remove Device'):
                 st.session_state.devices = [d for d in st.session_state.devices if d['name'] != device_to_remove]
+                st.experimental_rerun()
 
 with tab4:
     st.header('📊 Results')
@@ -148,7 +167,7 @@ with tab4:
     # Fuel/Electricity prices
     with st.expander("Fuel/Electricity Prices"):
         st.subheader('Fuel/Electricity Prices')
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             electricity_price = st.number_input('Electricity Price ($ per kWh)', min_value=0.0, value=0.12, help="Set the price of electricity per kWh")
         with col2:
@@ -166,7 +185,7 @@ with tab4:
 
     # Displaying the results
     st.subheader('Summary of Results')
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns([1, 1, 1])
     col1.metric('Power Required (kW)', f'{power:.2f}')
     col2.metric('Total Power Usage (kWh)', f'{total_power:.2f}')
     col3.metric('Total Cost ($)', f'{total_cost:.2f}')
@@ -208,9 +227,15 @@ with tab4:
     st.write(df)
 
     # Option to export results
-    if st.button('Export Results'):
-        df.to_csv('power_usage_results.csv')
-        st.success('Results exported to power_usage_results.csv')
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button('Export Results as CSV'):
+            df.to_csv('power_usage_results.csv')
+            st.success('Results exported to power_usage_results.csv')
+    with col2:
+        if st.button('Export Results as Excel'):
+            df.to_excel('power_usage_results.xlsx')
+            st.success('Results exported to power_usage_results.xlsx')
 
 with tab5:
     st.header('📁 Historical Data')
@@ -226,7 +251,8 @@ with tab5:
             if 'Time (hours)' in historical_data.columns and 'Power Usage (kWh)' in historical_data.columns:
                 # Plot historical data and current data for comparison
                 st.subheader('Comparison with Current Calculations')
-                st.line_chart(pd.merge(df, historical_data, on='Time (hours)', suffixes=('_current', '_historical')).set_index('Time (hours)'))
+                combined_data = pd.merge(df, historical_data, on='Time (hours)', suffixes=('_current', '_historical'))
+                st.line_chart(combined_data.set_index('Time (hours)'))
 
 with tab6:
     st.header('🔗 Connection Diagram')
@@ -248,3 +274,9 @@ with tab6:
         diagram.edge('Boat', device['name'])
 
     st.graphviz_chart(diagram)
+
+# Footer
+st.markdown("""
+    ---
+    Powered by Streamlit.
+""")
