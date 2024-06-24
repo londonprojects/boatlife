@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from geopy.distance import geodesic
 import graphviz as gv
 
@@ -179,13 +178,7 @@ with tab4:
 
     # Plotting power usage and generation over time
     st.subheader('Power Usage and Generation Over Time')
-    fig, ax = plt.subplots()
-    ax.plot(df['Time (hours)'], df['Net Power Usage (kWh)'], label='Net Power Usage')
-    ax.plot(df['Time (hours)'], df['Solar Power Generated (kWh)'], label='Solar Power Generated')
-    ax.set_xlabel('Time (hours)')
-    ax.set_ylabel('Power (kWh)')
-    ax.legend()
-    st.pyplot(fig)
+    st.line_chart(df.set_index('Time (hours)'))
 
     # Additional Visualization - Pie Chart for Power Distribution
     if st.session_state.devices:
@@ -196,9 +189,8 @@ with tab4:
             'Solar Contribution': solar_contribution  # Positive for pie chart
         }
         distribution_df = pd.DataFrame(list(power_distribution.items()), columns=['Source', 'Power (kWh)'])
-        fig, ax = plt.subplots()
-        ax.pie(distribution_df['Power (kWh)'], labels=distribution_df['Source'], autopct='%1.1f%%')
-        st.pyplot(fig)
+        st.write(distribution_df)
+        st.bar_chart(distribution_df.set_index('Source'))
 
     # Displaying the dataframe
     st.subheader('Detailed Data')
@@ -223,13 +215,7 @@ with tab5:
             if 'Time (hours)' in historical_data.columns and 'Power Usage (kWh)' in historical_data.columns:
                 # Plot historical data and current data for comparison
                 st.subheader('Comparison with Current Calculations')
-                fig, ax = plt.subplots()
-                ax.plot(historical_data['Time (hours)'], historical_data['Power Usage (kWh)'], label='Historical Data')
-                ax.plot(df['Time (hours)'], df['Net Power Usage (kWh)'], label='Current Calculation')
-                ax.set_xlabel('Time (hours)')
-                ax.set_ylabel('Power Usage (kWh)')
-                ax.legend()
-                st.pyplot(fig)
+                st.line_chart(pd.merge(df, historical_data, on='Time (hours)', suffixes=('_current', '_historical')).set_index('Time (hours)'))
 
 with tab6:
     st.header('🔗 Connection Diagram')
