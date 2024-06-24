@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import folium
-from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
 from geopy.distance import geodesic
 import graphviz as gv
@@ -63,33 +61,26 @@ with tab1:
 
 with tab2:
     st.header('🗺️ Route Visualization')
-    st.write("Click on the map to set the start and end points of your route. The first click sets the start point, and the second click sets the end point.")
+    st.write("Enter the coordinates for the start and end points of your route.")
 
-    m = folium.Map(location=[20, 0], zoom_start=2)
+    # Input fields for coordinates
+    col1, col2 = st.columns(2)
+    with col1:
+        start_lat = st.number_input('Start Latitude', value=0.0)
+        start_lon = st.number_input('Start Longitude', value=0.0)
+        if st.button('Set Start Point'):
+            st.session_state.start_location = {'lat': start_lat, 'lng': start_lon}
+    with col2:
+        end_lat = st.number_input('End Latitude', value=0.0)
+        end_lon = st.number_input('End Longitude', value=0.0)
+        if st.button('Set End Point'):
+            st.session_state.end_location = {'lat': end_lat, 'lng': end_lon}
 
-    # Display the map to get the start location
-    if st.session_state.start_location:
-        folium.Marker(
-            [st.session_state.start_location['lat'], st.session_state.start_location['lng']],
-            popup="Start Location",
-            tooltip="Start Location"
-        ).add_to(m)
-
-    # Display the map to get the end location
-    if st.session_state.end_location:
-        folium.Marker(
-            [st.session_state.end_location['lat'], st.session_state.end_location['lng']],
-            popup="End Location",
-            tooltip="End Location"
-        ).add_to(m)
-
-    # Add polyline if both locations are set
+    # Display the coordinates and calculate distance
     if st.session_state.start_location and st.session_state.end_location:
-        folium.PolyLine(
-            [(st.session_state.start_location['lat'], st.session_state.start_location['lng']),
-             (st.session_state.end_location['lat'], st.session_state.end_location['lng'])],
-            color='blue'
-        ).add_to(m)
+        st.write(f"Start Location: {st.session_state.start_location['lat']}, {st.session_state.start_location['lng']}")
+        st.write(f"End Location: {st.session_state.end_location['lat']}, {st.session_state.end_location['lng']}")
+
         distance = geodesic(
             (st.session_state.start_location['lat'], st.session_state.start_location['lng']),
             (st.session_state.end_location['lat'], st.session_state.end_location['lng'])
@@ -98,14 +89,6 @@ with tab2:
 
         # Update duration based on distance and speed
         duration = distance / speed
-
-    # Save start and end locations on map click
-    output = st_folium(m, width=700, height=500, key="map")
-    if output and output['last_clicked']:
-        if not st.session_state.start_location:
-            st.session_state.start_location = output['last_clicked']
-        elif not st.session_state.end_location:
-            st.session_state.end_location = output['last_clicked']
 
 with tab3:
     st.header('🔌 Device Management')
@@ -307,7 +290,3 @@ with tab7:
         wiring_diagram.edge('BusBar', device['name'], label='Circuit Breaker')
 
     st.graphviz_chart(wiring_diagram)
-
-# Display the map
-st.header('Map')
-st_folium(m, key='map')
