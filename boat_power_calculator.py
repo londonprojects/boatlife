@@ -1,26 +1,18 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from geopy.distance import geodesic
 import graphviz as gv
 
 # Initialize session state for devices if not already done
 if 'devices' not in st.session_state:
     st.session_state.devices = []
 
-# Initialize session state for start and end locations if not already done
-if 'start_location' not in st.session_state:
-    st.session_state.start_location = None
-if 'end_location' not in st.session_state:
-    st.session_state.end_location = None
-
 # Title
 st.title('🚤 Advanced Boat Power Usage Calculator')
 
 # Tabs for better organization
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "⚙️ Boat Parameters", "🗺️ Route Visualization", "🔌 Devices", 
-    "📊 Results", "📁 Historical Data", "🔗 Connection Diagram", "📜 Wiring Diagram"
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "⚙️ Boat Parameters", "🔌 Devices", "📊 Results", "📁 Historical Data", "🔗 Connection Diagram"
 ])
 
 with tab1:
@@ -59,37 +51,6 @@ with tab1:
             wave_height = st.slider('Wave Height (meters)', 0, 10, 1, help="Set the wave height in meters")
 
 with tab2:
-    st.header('🗺️ Route Visualization')
-    st.write("Enter the coordinates for the start and end points of your route.")
-
-    # Input fields for coordinates
-    col1, col2 = st.columns(2)
-    with col1:
-        start_lat = st.number_input('Start Latitude', value=0.0)
-        start_lon = st.number_input('Start Longitude', value=0.0)
-        if st.button('Set Start Point'):
-            st.session_state.start_location = {'lat': start_lat, 'lng': start_lon}
-    with col2:
-        end_lat = st.number_input('End Latitude', value=0.0)
-        end_lon = st.number_input('End Longitude', value=0.0)
-        if st.button('Set End Point'):
-            st.session_state.end_location = {'lat': end_lat, 'lng': end_lon}
-
-    # Display the coordinates and calculate distance
-    if st.session_state.start_location and st.session_state.end_location:
-        st.write(f"Start Location: {st.session_state.start_location['lat']}, {st.session_state.start_location['lng']}")
-        st.write(f"End Location: {st.session_state.end_location['lat']}, {st.session_state.end_location['lng']}")
-
-        distance = geodesic(
-            (st.session_state.start_location['lat'], st.session_state.start_location['lng']),
-            (st.session_state.end_location['lat'], st.session_state.end_location['lng'])
-        ).nautical
-        st.write(f'Distance: {distance:.2f} nautical miles')
-
-        # Update duration based on distance and speed
-        duration = distance / speed
-
-with tab3:
     st.header('🔌 Device Management')
     with st.expander("Add New Device"):
         device_name = st.text_input('Device Name', help="Enter the name of the device")
@@ -109,7 +70,7 @@ with tab3:
             if st.button('Remove Device'):
                 st.session_state.devices = [d for d in st.session_state.devices if d['name'] != device_to_remove]
 
-with tab4:
+with tab3:
     st.header('📊 Results')
 
     # Advanced power calculation
@@ -201,7 +162,7 @@ with tab4:
         df.to_csv('power_usage_results.csv')
         st.success('Results exported to power_usage_results.csv')
 
-with tab5:
+with tab4:
     st.header('📁 Historical Data')
     with st.expander("Upload Historical Power Usage Data"):
         uploaded_file = st.file_uploader("Upload Historical Power Usage Data (CSV)", type="csv")
@@ -217,7 +178,7 @@ with tab5:
                 st.subheader('Comparison with Current Calculations')
                 st.line_chart(pd.merge(df, historical_data, on='Time (hours)', suffixes=('_current', '_historical')).set_index('Time (hours)'))
 
-with tab6:
+with tab5:
     st.header('🔗 Connection Diagram')
     # Create a directed graph
     diagram = gv.Digraph(format='png')
@@ -237,42 +198,3 @@ with tab6:
         diagram.edge('Boat', device['name'])
 
     st.graphviz_chart(diagram)
-
-with tab7:
-    st.header('📜 Wiring Diagram and Best Practices')
-    st.markdown("""
-    ## Best Practices for Boat Wiring:
-    1. **Use Marine Grade Wire:** Always use marine-grade wire as it is designed to withstand the harsh marine environment.
-    2. **Properly Size Your Wire:** Ensure that the wire gauge is appropriate for the current load and distance to minimize voltage drop.
-    3. **Use Circuit Protection:** Install fuses or circuit breakers to protect wiring from overcurrent.
-    4. **Secure Wiring:** Use cable ties and clamps to secure wiring and prevent chafing.
-    5. **Proper Grounding:** Ensure a proper grounding system to prevent electrical shock and equipment damage.
-    6. **Label Wires:** Clearly label wires for easy identification during maintenance.
-    7. **Avoid Sharp Bends:** Avoid sharp bends in wiring to prevent damage.
-
-    ### Sample Wiring Diagram:
-    """)
-
-    # Create a sample wiring diagram using graphviz
-    wiring_diagram = gv.Digraph(format='png')
-    
-    # Add power source nodes
-    wiring_diagram.node('Battery', 'Battery\nCapacity: {:.2f} kWh'.format(selected_battery_capacity))
-    wiring_diagram.node('Solar', 'Solar Panel\nPower: {:.2f} kW'.format(solar_power))
-    
-    # Add main bus bar node
-    wiring_diagram.node('BusBar', 'Main Bus Bar')
-    
-    # Add device nodes
-    for device in st.session_state.devices:
-        wiring_diagram.node(device['name'], f"{device['name']}\nPower: {device['power']} W")
-
-    # Connect power sources to bus bar
-    wiring_diagram.edge('Battery', 'BusBar', label='Fuse')
-    wiring_diagram.edge('Solar', 'BusBar', label='Charge Controller')
-    
-    # Connect devices to bus bar
-    for device in st.session_state.devices:
-        wiring_diagram.edge('BusBar', device['name'], label='Circuit Breaker')
-
-    st.graphviz_chart(wiring_diagram)
