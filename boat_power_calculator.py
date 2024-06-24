@@ -4,7 +4,6 @@ import numpy as np
 import folium
 from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
-from geopy.distance import geodesic
 import graphviz as gv
 
 # Initialize session state for devices if not already done
@@ -21,9 +20,9 @@ if 'end_location' not in st.session_state:
 st.title('🚤 Advanced Boat Power Usage Calculator')
 
 # Tabs for better organization
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "⚙️ Boat Parameters", "🗺️ Route Visualization", "🔌 Devices", 
-    "📊 Results", "📁 Historical Data", "🔗 Connection Diagram", "📜 Wiring Diagram"
+    "📊 Results", "📁 Historical Data", "🔗 Connection Diagram"
 ])
 
 with tab1:
@@ -90,14 +89,8 @@ with tab2:
              (st.session_state.end_location['lat'], st.session_state.end_location['lng'])],
             color='blue'
         ).add_to(m)
-        distance = geodesic(
-            (st.session_state.start_location['lat'], st.session_state.start_location['lng']),
-            (st.session_state.end_location['lat'], st.session_state.end_location['lng'])
-        ).nautical
-        st.write(f'Distance: {distance:.2f} nautical miles')
-
-        # Update duration based on distance and speed
-        duration = distance / speed
+        distance = ((st.session_state.start_location['lat'] - st.session_state.end_location['lat'])**2 + (st.session_state.start_location['lng'] - st.session_state.end_location['lng'])**2)**0.5
+        st.write(f'Distance: {distance:.2f} units')
 
     # Save start and end locations on map click
     output = st_folium(m, width=700, height=500, key="map")
@@ -196,13 +189,7 @@ with tab4:
 
     # Plotting power usage and generation over time
     st.subheader('Power Usage and Generation Over Time')
-    fig, ax = plt.subplots()
-    ax.plot(df['Time (hours)'], df['Net Power Usage (kWh)'], label='Net Power Usage')
-    ax.plot(df['Time (hours)'], df['Solar Power Generated (kWh)'], label='Solar Power Generated')
-    ax.set_xlabel('Time (hours)')
-    ax.set_ylabel('Power (kWh)')
-    ax.legend()
-    st.pyplot(fig)
+    st.line_chart(df.set_index('Time (hours)'))
 
     # Additional Visualization - Pie Chart for Power Distribution
     if st.session_state.devices:
@@ -213,9 +200,8 @@ with tab4:
             'Solar Contribution': solar_contribution  # Positive for pie chart
         }
         distribution_df = pd.DataFrame(list(power_distribution.items()), columns=['Source', 'Power (kWh)'])
-        fig, ax = plt.subplots()
-        ax.pie(distribution_df['Power (kWh)'], labels=distribution_df['Source'], autopct='%1.1f%%')
-        st.pyplot(fig)
+        st.write(distribution_df)
+        st.bar_chart(distribution_df.set_index('Source'))
 
     # Displaying the dataframe
     st.subheader('Detailed Data')
@@ -240,13 +226,7 @@ with tab5:
             if 'Time (hours)' in historical_data.columns and 'Power Usage (kWh)' in historical_data.columns:
                 # Plot historical data and current data for comparison
                 st.subheader('Comparison with Current Calculations')
-                fig, ax = plt.subplots()
-                ax.plot(historical_data['Time (hours)'], historical_data['Power Usage (kWh)'], label='Historical Data')
-                ax.plot(df['Time (hours)'], df['Net Power Usage (kWh)'], label='Current Calculation')
-                ax.set_xlabel('Time (hours)')
-                ax.set_ylabel('Power Usage (kWh)')
-                ax.legend()
-                st.pyplot(fig)
+                st.line_chart(pd.merge(df, historical_data, on='Time (hours)', suffixes=('_current', '_historical')).set_index('Time (hours)'))
 
 with tab6:
     st.header('🔗 Connection Diagram')
@@ -268,46 +248,3 @@ with tab6:
         diagram.edge('Boat', device['name'])
 
     st.graphviz_chart(diagram)
-
-with tab7:
-    st.header('📜 Wiring Diagram and Best Practices')
-    st.markdown("""
-    ## Best Practices for Boat Wiring:
-    1. **Use Marine Grade Wire:** Always use marine-grade wire as it is designed to withstand the harsh marine environment.
-    2. **Properly Size Your Wire:** Ensure that the wire gauge is appropriate for the current load and distance to minimize voltage drop.
-    3. **Use Circuit Protection:** Install fuses or circuit breakers to protect wiring from overcurrent.
-    4. **Secure Wiring:** Use cable ties and clamps to secure wiring and prevent chafing.
-    5. **Proper Grounding:** Ensure a proper grounding system to prevent electrical shock and equipment damage.
-    6. **Label Wires:** Clearly label wires for easy identification during maintenance.
-    7. **Avoid Sharp Bends:** Avoid sharp bends in wiring to prevent damage.
-
-    ### Sample Wiring Diagram:
-    """)
-
-    # Create a sample wiring diagram using graphviz
-    wiring_diagram = gv.Digraph(format='png')
-    
-    # Add power source nodes
-    wiring_diagram.node('Battery', 'Battery\nCapacity: {:.2f} kWh'.format(selected_battery_capacity))
-    wiring_diagram.node('Solar', 'Solar Panel\nPower: {:.2f} kW'.format(solar_power))
-    
-    # Add main bus bar node
-    wiring_diagram.node('BusBar', 'Main Bus Bar')
-    
-    # Add device nodes
-    for device in st.session_state.devices:
-        wiring_diagram.node(device['name'], f"{device['name']}\nPower: {device['power']} W")
-
-    # Connect power sources to bus bar
-    wiring_diagram.edge('Battery', 'BusBar', label='Fuse')
-    wiring_diagram.edge('Solar', 'BusBar', label='Charge Controller')
-    
-    # Connect devices to bus bar
-    for device in st.session_state.devices:
-        wiring_diagram.edge('BusBar', device['name'], label='Circuit Breaker')
-
-    st.graphviz_chart(wiring_diagram)
-
-# Display the map
-st.header('Map')
-st_folium(m, key='map')
